@@ -25,14 +25,14 @@ const CameraType = {
 
 // Using your existing sticker assets
 const STICKERS = [
-  { id: 1, source: require('../stickers/pompom1.png') },
-  { id: 2, source: require('../stickers/pompom2.png') },
-  { id: 3, source: require('../stickers/pompom3.png') },
-  { id: 4, source: require('../stickers/pompom4.png') },
-  { id: 5, source: require('../stickers/sparkle1.png') },
-  { id: 6, source: require('../stickers/sparkle2.png') },
-  { id: 7, source: require('../stickers/sparkle3.png') },
-  { id: 8, source: require('../stickers/sparkle4.png') },
+    { id: 1, source: require('../../assets/stickers/pompom1.png') },
+    { id: 2, source: require('../../assets/stickers/pompom2.png') },
+    { id: 3, source: require('../../assets/stickers/pompom3.png') },
+    { id: 4, source: require('../../assets/stickers/pompom4.png') },
+    { id: 5, source: require('../../assets/stickers/sparkle1.png') },
+    { id: 6, source: require('../../assets/stickers/sparkle2.png') },
+    { id: 7, source: require('../../assets/stickers/sparkle3.png') },
+    { id: 8, source: require('../../assets/stickers/sparkle4.png') },
 ];
 
 const CameraScreen = () => {

@@ -1,10 +1,9 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from './HomeScreen';
 import TeamScreen from './TeamScreen';
-import CameraScreen from "./CameraScreen"; // Import the TabNavigator
-
+import CameraScreen from "./CameraScreen";
+import RedditScreen from "./RedditScreen"; // Import the new RedditScreen
 
 import { Ionicons } from '@expo/vector-icons'; // For tab icons
 
@@ -20,22 +19,31 @@ const TabNavigator = () => {
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Team') {
-            iconName = focused ? 'team' : 'people-circle-outline';
+            iconName = focused ? 'people' : 'people-outline';
           } else if (route.name === 'Camera') {
             iconName = focused ? 'camera' : 'camera-outline';
+          } else if (route.name === 'Reddit') {
+            iconName = focused ? 'logo-reddit' : 'logo-reddit';
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: 'blue', // Color for the active tab
-        tabBarInactiveTintColor: 'gray', // Color for inactive tabs
+        tabBarActiveTintColor: '#01DBC6', // Changed to match your app's teal color
+        tabBarInactiveTintColor: 'gray',
+        tabBarStyle: {
+          backgroundColor: '#1A1A1B', // Dark background for the tab bar
+          borderTopColor: '#343536', // Subtle border color
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+        },
+        headerShown: false, // Hide the header for all tabs
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Team" component={TeamScreen} /> 
-      <Tab.Screen name="Camera" component={CameraScreen} /> 
-
-
+      <Tab.Screen name="Team" component={TeamScreen} />
+      <Tab.Screen name="Camera" component={CameraScreen} />
+      <Tab.Screen name="Reddit" component={RedditScreen} />
     </Tab.Navigator>
   );
 };
