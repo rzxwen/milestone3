@@ -1,3 +1,6 @@
+
+// since this uses Reddit's public JSON API it needs no authentication to fetch and display posts
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -15,7 +18,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// List of Star Rail character subreddits
+// list of Star Rail character subreddits
 const CHARACTER_SUBREDDITS = [
   { name: 'Kafka', subreddit: 'KafkaMains' },
   { name: 'Silver Wolf', subreddit: 'SilverWolfMains' },
@@ -36,6 +39,8 @@ const CHARACTER_SUBREDDITS = [
   { name: 'General', subreddit: 'HonkaiStarRail' }
 ];
 
+
+// state management for all the posts data  and UI controls
 const RedditScreen = () => {
   const [selectedSubreddit, setSelectedSubreddit] = useState('HonkaiStarRail');
   const [posts, setPosts] = useState([]);
@@ -45,7 +50,7 @@ const RedditScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
 
-  // Fetch posts from selected subreddit
+  // fetch posts from selected subreddit, code taken from https://www.reddit.com/dev/api/
   const fetchPosts = async (subreddit, sort = sortBy) => {
     setLoading(true);
     setError(null);
@@ -59,7 +64,7 @@ const RedditScreen = () => {
       
       const data = await response.json();
       
-      // Process the data to extract only what we need
+      // process the data to extract only what we need
       const processedPosts = data.data.children.map(post => ({
         id: post.data.id,
         title: post.data.title,
@@ -85,49 +90,49 @@ const RedditScreen = () => {
     }
   };
 
-  // Filter subreddits based on search query
+  // filter subreddits based on search query
   const filteredSubreddits = CHARACTER_SUBREDDITS.filter(item => 
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.subreddit.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Initial fetch and when subreddit/sort changes
+  // initial fetch and when subreddit/sort changes
   useEffect(() => {
     fetchPosts(selectedSubreddit, sortBy);
   }, [selectedSubreddit, sortBy]);
 
-  // Handle pull-to-refresh
+  // handle pull-to-refresh
   const onRefresh = () => {
     setRefreshing(true);
     fetchPosts(selectedSubreddit, sortBy);
   };
 
-  // Change sort order
+  // change sort order
   const changeSortOrder = (newSort) => {
     setSortBy(newSort);
   };
 
-  // Format timestamp to relative time (e.g., "2 hours ago")
+  // format timestamp to relative time (e.g., "2 hours ago")
   const formatRelativeTime = (timestamp) => {
     const now = Math.floor(Date.now() / 1000);
     const diff = now - timestamp;
     
     if (diff < 60) return 'just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)} minute${Math.floor(diff / 60) !== 1 ? 's' : ''} ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} hour${Math.floor(diff / 3600) !== 1 ? 's' : ''} ago`;
-    if (diff < 2592000) return `${Math.floor(diff / 86400)} day${Math.floor(diff / 86400) !== 1 ? 's' : ''} ago`;
-    if (diff < 31536000) return `${Math.floor(diff / 2592000)} month${Math.floor(diff / 2592000) !== 1 ? 's' : ''} ago`;
-    return `${Math.floor(diff / 31536000)} year${Math.floor(diff / 31536000) !== 1 ? 's' : ''} ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)} minute${Math.floor(diff / 60) !== 1 ? 's' : ''} ago`; // in minutes
+    if (diff < 86400) return `${Math.floor(diff / 3600)} hour${Math.floor(diff / 3600) !== 1 ? 's' : ''} ago`; // 24 hours
+    if (diff < 2592000) return `${Math.floor(diff / 86400)} day${Math.floor(diff / 86400) !== 1 ? 's' : ''} ago`; // 5 days
+    if (diff < 31536000) return `${Math.floor(diff / 2592000)} month${Math.floor(diff / 2592000) !== 1 ? 's' : ''} ago`; // month
+    return `${Math.floor(diff / 31536000)} year${Math.floor(diff / 31536000) !== 1 ? 's' : ''} ago`; // year 
   };
 
-  // Open post in browser
+  // open the clicked post in browser
   const openPostInBrowser = (permalink) => {
     Linking.openURL(`https://reddit.com${permalink}`);
   };
 
-  // Render a post item
+  // reddit post rendering
   const renderPostItem = ({ item }) => {
-    // Determine if thumbnail should be shown
+    // determine if thumbnail should be shown
     const showThumbnail = item.thumbnail && 
                           item.thumbnail !== 'self' && 
                           item.thumbnail !== 'default' &&
@@ -177,7 +182,7 @@ const RedditScreen = () => {
     );
   };
 
-  // Render a subreddit button
+  // render a subreddit button
   const renderSubredditButton = ({ item }) => (
     <TouchableOpacity
       style={[
@@ -222,7 +227,7 @@ const RedditScreen = () => {
           )}
         </View>
 
-        {/* Subreddit selection */}
+        {/* subreddit selection */}
         <View style={styles.subredditSelection}>
           <FlatList
             data={filteredSubreddits}
@@ -234,7 +239,7 @@ const RedditScreen = () => {
           />
         </View>
 
-        {/* Sort options */}
+        {/* sort options */}
         <View style={styles.sortOptions}>
           <TouchableOpacity
             style={[styles.sortButton, sortBy === 'hot' && styles.activeSortButton]}
@@ -279,7 +284,7 @@ const RedditScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Error message */}
+        {/* error message */}
         {error && (
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle" size={24} color="#FF4500" />
@@ -287,7 +292,7 @@ const RedditScreen = () => {
           </View>
         )}
 
-        {/* Posts list */}
+        {/* posts list */}
         {loading && posts.length === 0 ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#01DBC6" />

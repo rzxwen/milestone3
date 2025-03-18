@@ -17,13 +17,12 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import ViewShot from 'react-native-view-shot';
 
-// Define camera types as constants
 const CameraType = {
   back: 'back',
   front: 'front',
 };
 
-// Using your existing sticker assets
+// sticker assets
 const STICKERS = [
     { id: 1, source: require('../../assets/stickers/pompom1.png') },
     { id: 2, source: require('../../assets/stickers/pompom2.png') },
@@ -36,11 +35,10 @@ const STICKERS = [
 ];
 
 const CameraScreen = () => {
-  // Get screen dimensions for boundary checking and full-screen display
+  // get screen dimensions for boundary checking and full-screen display
   const screenWidth = Dimensions.get('window').width;
   const screenHeight = Dimensions.get('window').height;
   
-  // State management
   const [facing, setFacing] = useState(CameraType.back);
   const [permission, requestPermission] = useCameraPermissions();
   const [photoUri, setPhotoUri] = useState(null);
@@ -48,14 +46,14 @@ const CameraScreen = () => {
   const [placedStickers, setPlacedStickers] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [finalImageUri, setFinalImageUri] = useState(null);
-  const [selectedStickerSize, setSelectedStickerSize] = useState(1); // Scale factor for stickers
+  const [selectedStickerSize, setSelectedStickerSize] = useState(1); // scale factor for stickers
   const [viewShotLayout, setViewShotLayout] = useState({ width: 0, height: 0 });
-  const [showDeleteButtons, setShowDeleteButtons] = useState(true); // Control delete button visibility
+  const [showDeleteButtons, setShowDeleteButtons] = useState(true); // delete button visibility
   
   const cameraRef = useRef(null);
   const viewShotRef = useRef(null);
   
-  // Permission handling
+  // permission handling
   if (!permission) {
     return (
       <View style={styles.container}>
@@ -75,18 +73,17 @@ const CameraScreen = () => {
     );
   }
 
-  // Camera functions
+  // camera functions
   const takePicture = async () => {
     if (cameraRef.current) {
       try {
-        // Take a full-resolution photo
         const photo = await cameraRef.current.takePictureAsync({
           quality: 1,
-          skipProcessing: false, // Process the image for better quality
+          skipProcessing: false, // process the image for better quality
         });
         setPhotoUri(photo.uri);
-        setIsEditing(true); // Enter editing mode with stickers
-        setShowDeleteButtons(true); // Show delete buttons while editing
+        setIsEditing(true); // enter editing mode with stickers
+        setShowDeleteButtons(true); // show delete buttons while editing
       } catch (error) {
         console.error('Error taking picture:', error);
         Alert.alert('Error', 'Failed to take picture');
@@ -95,25 +92,25 @@ const CameraScreen = () => {
   };
   
   const sharePhoto = async () => {
-    // Hide delete buttons before capturing the image
+    // hide delete buttons before capturing the image
     setShowDeleteButtons(false);
     
-    // Wait a moment for the UI to update before capturing
+    // wait a moment for the UI to update before capturing
     setTimeout(async () => {
-      // If we have stickers, capture the combined view first
+      // ff we have stickers, capture the combined view first
       if (placedStickers.length > 0 && viewShotRef.current) {
         try {
           const capturedUri = await viewShotRef.current.capture();
           setFinalImageUri(capturedUri);
           
-          // Share the composite image
+          // share the combined image
           const fileUrl = Platform.OS === 'ios' ? capturedUri : `file://${capturedUri}`;
           await Share.share({
             url: fileUrl,
             message: 'Check out my Star Rail journey!'
           });
           
-          // Show delete buttons again after sharing
+          // how delete buttons again after sharing
           setShowDeleteButtons(true);
         } catch (error) {
           console.error('Error capturing or sharing edited photo:', error);
@@ -121,7 +118,7 @@ const CameraScreen = () => {
           setShowDeleteButtons(true);
         }
       } else {
-        // If no stickers, share the original photo
+        // if no stickers, share the original photo
         try {
           const fileUrl = Platform.OS === 'ios' ? photoUri : `file://${photoUri}`;
           await Share.share({
@@ -135,15 +132,15 @@ const CameraScreen = () => {
           setShowDeleteButtons(true);
         }
       }
-    }, 100); // Give UI time to update
+    }, 100); // give UI time to update so the sticker is captured as well
   };
 
-  // Add a sticker to the image
+  // add a sticker to the image
   const handleStickerSelect = (sticker) => {
-    // Generate unique id for the placed sticker and place it in the center of the viewshot area
-    const centerX = viewShotLayout.width / 2 - 40; // Accounting for sticker width
-    const centerY = viewShotLayout.height / 2 - 40; // Accounting for sticker height
-    
+    // generate unique id for the placed sticker and place it in the center of the camera view 
+    const centerX = viewShotLayout.width / 2 - 40; // accounting for sticker width
+    const centerY = viewShotLayout.height / 2 - 40; 
+
     const newSticker = {
       id: Date.now(),
       sticker,
@@ -154,12 +151,12 @@ const CameraScreen = () => {
     setPlacedStickers([...placedStickers, newSticker]);
   };
 
-  // Update a sticker's position in the main array
+  // update a sticker's position so when it is dragged with panResponder, it does not teleport back to the original position
   const updateStickerPosition = (id, newPosition) => {
-    // Use the functional form of setState to avoid closure problems
     setPlacedStickers(currentStickers => 
       currentStickers.map(item => {
         if (item.id === id) {
+          // code to update from previous state https://react.dev/reference/react/useState#updating-state-based-on-the-previous-state
           return { ...item, position: newPosition };
         }
         return item;
@@ -184,7 +181,7 @@ const CameraScreen = () => {
   };
 
   const finishEditing = () => {
-    // Capture the final image with stickers
+    // capture the final image with stickers and update the final uri
     if (viewShotRef.current) {
       viewShotRef.current.capture().then(uri => {
         setFinalImageUri(uri);
@@ -201,50 +198,49 @@ const CameraScreen = () => {
     setViewShotLayout({ width, height });
   };
 
-  // PlacedSticker component - internal to CameraScreen
   const PlacedSticker = ({ sticker, position: initialPosition, id, scale = 1 }) => {
-    // We need to use initialPosition directly in our local state
+    // initialPosition directly in our local state
     const [position, setPosition] = useState(initialPosition);
     
-    // Use refs to track position during drag operations
+    // use refs to track position during drag operations
     const positionRef = useRef(initialPosition);
     const lastGestureState = useRef({ dx: 0, dy: 0 });
     
-    // This useEffect ensures our local state stays in sync with parent props
+    // this useEffect ensures our local state stays in sync with parent, also ensure proper functionality with drag gestures
     useEffect(() => {
       positionRef.current = initialPosition;
       setPosition(initialPosition);
     }, [initialPosition]);
     
-    // Create pan responder for dragging functionality with boundary checks
+    // create pan responder for dragging functionality with boundary checks, code from https://reactnative.dev/docs/panresponder
     const panResponder = useRef(
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onPanResponderGrant: () => {
-          // Reset gesture tracking at the start of a new drag
+          // reset gesture tracking at the start of a new drag
           lastGestureState.current = { dx: 0, dy: 0 };
         },
         onPanResponderMove: (evt, gestureState) => {
-          // Calculate the new position based on the gesture deltas
+          // calculate the new position
           const newX = positionRef.current.x + (gestureState.dx - lastGestureState.current.dx);
           const newY = positionRef.current.y + (gestureState.dy - lastGestureState.current.dy);
           
-          // Constrain to viewShot boundaries
+          // boundary constaints for the sticker
           const stickerSize = 80 * scale;
           const constrainedX = Math.max(0, Math.min(viewShotLayout.width - stickerSize, newX));
           const constrainedY = Math.max(0, Math.min(viewShotLayout.height - stickerSize, newY));
           
-          // Update the position ref and state
+          // update the position ref and state
           const newPosition = { x: constrainedX, y: constrainedY };
           positionRef.current = newPosition;
           setPosition(newPosition);
           
-          // Keep track of the current gesture state for next move
+          // keep track of the current gesture state for next move
           lastGestureState.current = { dx: gestureState.dx, dy: gestureState.dy };
         },
         onPanResponderRelease: () => {
-          // When the drag is finished, update the parent component state
-          // This is crucial - we must sync our final position with the parent
+          // when the drag is finished, update the parent component state
+          // sync the sticker's final position with the parent
           updateStickerPosition(id, positionRef.current);
         },
       })
@@ -284,11 +280,11 @@ const CameraScreen = () => {
     );
   };
 
-  // Sticker selector component - internal to CameraScreen
+  // sticker selector component
   const StickerSelector = () => {
     return (
       <View style={styles.stickerSelectorContainer}>
-        {/* Size selector */}
+        {/* size selector for small, medium and large sticker sizes */}
         <View style={styles.sizeSelector}>
           <TouchableOpacity 
             style={[styles.sizeButton, selectedStickerSize === 0.75 && styles.selectedSize]} 
@@ -310,7 +306,7 @@ const CameraScreen = () => {
           </TouchableOpacity>
         </View>
         
-        {/* Sticker options */}
+        {/* sticker selection from horizontal menu */}
         <ScrollView 
           horizontal 
           style={styles.stickerSelector}
@@ -334,12 +330,12 @@ const CameraScreen = () => {
     );
   };
 
-  // UI Rendering
+  // UI rendering
   return (
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" />
       {photoUri ? (
-        // Photo preview with sticker editing - Full screen
+        // photo preview with sticker editing
         <View style={styles.previewContainer}>
           <ViewShot 
             ref={viewShotRef} 
@@ -349,7 +345,7 @@ const CameraScreen = () => {
           >
             <Image source={{ uri: photoUri }} style={styles.previewImage} />
             
-            {/* Display all placed stickers */}
+            {/* display all placed stickers */}
             {placedStickers.map((item) => (
               <PlacedSticker 
                 key={item.id}
@@ -361,7 +357,7 @@ const CameraScreen = () => {
             ))}
           </ViewShot>
           
-          {/* Sticker selector - only show when in editing mode */}
+          {/* sticker selector - only show when in editing mode */}
           {isEditing && <StickerSelector />}
           
           <View style={styles.previewButtons}>
@@ -384,7 +380,7 @@ const CameraScreen = () => {
           </View>
         </View>
       ) : (
-        // Camera view - Full screen
+        // full screen camera view settings
         <CameraView 
           ref={cameraRef} 
           style={styles.camera} 
