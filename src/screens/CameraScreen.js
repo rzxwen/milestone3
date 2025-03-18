@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -9,7 +9,9 @@ import {
   Share,
   Platform,
   ScrollView,
-  PanResponder
+  PanResponder,
+  Dimensions,
+  StatusBar
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,7 +23,7 @@ const CameraType = {
   front: 'front',
 };
 
-// This will be updated with your actual sticker assets
+// Using your existing sticker assets
 const STICKERS = [
   { id: 1, source: require('../stickers/pompom1.png') },
   { id: 2, source: require('../stickers/pompom2.png') },
@@ -34,6 +36,10 @@ const STICKERS = [
 ];
 
 const CameraScreen = () => {
+  // Get screen dimensions for boundary checking and full-screen display
+  const screenWidth = Dimensions.get('window').width;
+  const screenHeight = Dimensions.get('window').height;
+  
   // State management
   const [facing, setFacing] = useState(CameraType.back);
   const [permission, requestPermission] = useCameraPermissions();
@@ -42,10 +48,13 @@ const CameraScreen = () => {
   const [placedStickers, setPlacedStickers] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [finalImageUri, setFinalImageUri] = useState(null);
+  const [selectedStickerSize, setSelectedStickerSize] = useState(1); // Scale factor for stickers
+  const [viewShotLayout, setViewShotLayout] = useState({ width: 0, height: 0 });
+  const [showDeleteButtons, setShowDeleteButtons] = useState(true); // Control delete button visibility
   
   const cameraRef = useRef(null);
   const viewShotRef = useRef(null);
-
+  
   // Permission handling
   if (!permission) {
     return (
@@ -70,9 +79,14 @@ const CameraScreen = () => {
   const takePicture = async () => {
     if (cameraRef.current) {
       try {
-        const photo = await cameraRef.current.takePictureAsync();
+        // Take a full-resolution photo
+        const photo = await cameraRef.current.takePictureAsync({
+          quality: 1,
+          skipProcessing: false, // Process the image for better quality
+        });
         setPhotoUri(photo.uri);
         setIsEditing(true); // Enter editing mode with stickers
+        setShowDeleteButtons(true); // Show delete buttons while editing
       } catch (error) {
         console.error('Error taking picture:', error);
         Alert.alert('Error', 'Failed to take picture');
@@ -81,47 +95,76 @@ const CameraScreen = () => {
   };
   
   const sharePhoto = async () => {
-    // If we have stickers, capture the combined view first
-    if (placedStickers.length > 0 && viewShotRef.current) {
-      try {
-        const capturedUri = await viewShotRef.current.capture();
-        setFinalImageUri(capturedUri);
-        
-        // Share the composite image
-        const fileUrl = Platform.OS === 'ios' ? capturedUri : `file://${capturedUri}`;
-        await Share.share({
-          url: fileUrl,
-          message: 'Check out my Star Rail journey!'
-        });
-      } catch (error) {
-        console.error('Error capturing or sharing edited photo:', error);
-        Alert.alert('Error', 'Failed to share photo');
+    // Hide delete buttons before capturing the image
+    setShowDeleteButtons(false);
+    
+    // Wait a moment for the UI to update before capturing
+    setTimeout(async () => {
+      // If we have stickers, capture the combined view first
+      if (placedStickers.length > 0 && viewShotRef.current) {
+        try {
+          const capturedUri = await viewShotRef.current.capture();
+          setFinalImageUri(capturedUri);
+          
+          // Share the composite image
+          const fileUrl = Platform.OS === 'ios' ? capturedUri : `file://${capturedUri}`;
+          await Share.share({
+            url: fileUrl,
+            message: 'Check out my Star Rail journey!'
+          });
+          
+          // Show delete buttons again after sharing
+          setShowDeleteButtons(true);
+        } catch (error) {
+          console.error('Error capturing or sharing edited photo:', error);
+          Alert.alert('Error', 'Failed to share photo');
+          setShowDeleteButtons(true);
+        }
+      } else {
+        // If no stickers, share the original photo
+        try {
+          const fileUrl = Platform.OS === 'ios' ? photoUri : `file://${photoUri}`;
+          await Share.share({
+            url: fileUrl,
+            message: 'Check out my Star Rail journey!'
+          });
+          setShowDeleteButtons(true);
+        } catch (error) {
+          console.error('Error sharing photo:', error);
+          Alert.alert('Error', 'Failed to share photo');
+          setShowDeleteButtons(true);
+        }
       }
-    } else {
-      // If no stickers, share the original photo
-      try {
-        const fileUrl = Platform.OS === 'ios' ? photoUri : `file://${photoUri}`;
-        await Share.share({
-          url: fileUrl,
-          message: 'Check out my Star Rail journey!'
-        });
-      } catch (error) {
-        console.error('Error sharing photo:', error);
-        Alert.alert('Error', 'Failed to share photo');
-      }
-    }
+    }, 100); // Give UI time to update
   };
 
   // Add a sticker to the image
   const handleStickerSelect = (sticker) => {
-    // Generate unique id for the placed sticker
+    // Generate unique id for the placed sticker and place it in the center of the viewshot area
+    const centerX = viewShotLayout.width / 2 - 40; // Accounting for sticker width
+    const centerY = viewShotLayout.height / 2 - 40; // Accounting for sticker height
+    
     const newSticker = {
       id: Date.now(),
       sticker,
-      position: { x: 100, y: 100 }  // Default initial position
+      position: { x: centerX, y: centerY },
+      scale: selectedStickerSize,
     };
     
     setPlacedStickers([...placedStickers, newSticker]);
+  };
+
+  // Update a sticker's position in the main array
+  const updateStickerPosition = (id, newPosition) => {
+    // Use the functional form of setState to avoid closure problems
+    setPlacedStickers(currentStickers => 
+      currentStickers.map(item => {
+        if (item.id === id) {
+          return { ...item, position: newPosition };
+        }
+        return item;
+      })
+    );
   };
 
   const toggleCameraFacing = () => {
@@ -137,6 +180,7 @@ const CameraScreen = () => {
     setPlacedStickers([]);
     setIsEditing(false);
     setFinalImageUri(null);
+    setShowDeleteButtons(true);
   };
 
   const finishEditing = () => {
@@ -152,24 +196,56 @@ const CameraScreen = () => {
     }
   };
 
-  // PlacedSticker component - now internal to CameraScreen
-  const PlacedSticker = ({ sticker, position: initialPosition, id }) => {
-    const [position, setPosition] = useState(initialPosition || { x: 100, y: 100 });
+  const handleViewShotLayout = (event) => {
+    const { width, height } = event.nativeEvent.layout;
+    setViewShotLayout({ width, height });
+  };
+
+  // PlacedSticker component - internal to CameraScreen
+  const PlacedSticker = ({ sticker, position: initialPosition, id, scale = 1 }) => {
+    // We need to use initialPosition directly in our local state
+    const [position, setPosition] = useState(initialPosition);
     
-    // Create pan responder for dragging functionality
-    const panResponder = React.useRef(
+    // Use refs to track position during drag operations
+    const positionRef = useRef(initialPosition);
+    const lastGestureState = useRef({ dx: 0, dy: 0 });
+    
+    // This useEffect ensures our local state stays in sync with parent props
+    useEffect(() => {
+      positionRef.current = initialPosition;
+      setPosition(initialPosition);
+    }, [initialPosition]);
+    
+    // Create pan responder for dragging functionality with boundary checks
+    const panResponder = useRef(
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          // Reset gesture tracking at the start of a new drag
+          lastGestureState.current = { dx: 0, dy: 0 };
+        },
         onPanResponderMove: (evt, gestureState) => {
-          // Update sticker position based on drag
-          setPosition({
-            x: position.x + gestureState.dx,
-            y: position.y + gestureState.dy
-          });
+          // Calculate the new position based on the gesture deltas
+          const newX = positionRef.current.x + (gestureState.dx - lastGestureState.current.dx);
+          const newY = positionRef.current.y + (gestureState.dy - lastGestureState.current.dy);
+          
+          // Constrain to viewShot boundaries
+          const stickerSize = 80 * scale;
+          const constrainedX = Math.max(0, Math.min(viewShotLayout.width - stickerSize, newX));
+          const constrainedY = Math.max(0, Math.min(viewShotLayout.height - stickerSize, newY));
+          
+          // Update the position ref and state
+          const newPosition = { x: constrainedX, y: constrainedY };
+          positionRef.current = newPosition;
+          setPosition(newPosition);
+          
+          // Keep track of the current gesture state for next move
+          lastGestureState.current = { dx: gestureState.dx, dy: gestureState.dy };
         },
         onPanResponderRelease: () => {
-          // You could add more logic here when the user stops dragging
-          // For example, snap to grid or boundaries
+          // When the drag is finished, update the parent component state
+          // This is crucial - we must sync our final position with the parent
+          updateStickerPosition(id, positionRef.current);
         },
       })
     ).current;
@@ -182,52 +258,95 @@ const CameraScreen = () => {
           {
             left: position.x,
             top: position.y,
+            transform: [{ scale: scale }]
           }
         ]}
       >
-        <Image source={sticker.source} style={styles.placedStickerImage} />
-        {/* Optional: Add a remove button on long press or with a small X icon */}
-        <TouchableOpacity 
-          style={styles.removeButton}
-          onPress={() => {
-            // Remove this sticker from the placed stickers array
-            setPlacedStickers(placedStickers.filter(s => s.id !== id));
-          }}
-        >
-          <Ionicons name="close-circle" size={20} color="#FF4500" />
-        </TouchableOpacity>
+        {/* Image sticker */}
+        <Image
+          source={sticker.source}
+          style={styles.placedStickerImage}
+          resizeMode="contain"
+        />
+        
+        {/* Remove button - only show when editing and showDeleteButtons is true */}
+        {isEditing && showDeleteButtons && (
+          <TouchableOpacity 
+            style={styles.removeButton}
+            onPress={() => {
+              setPlacedStickers(current => current.filter(s => s.id !== id));
+            }}
+          >
+            <Ionicons name="close-circle" size={20} color="#FF4500" />
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
 
-  // Sticker selector component - now internal to CameraScreen
+  // Sticker selector component - internal to CameraScreen
   const StickerSelector = () => {
     return (
-      <ScrollView 
-        horizontal 
-        style={styles.stickerSelector}
-        showsHorizontalScrollIndicator={false}
-      >
-        {STICKERS.map((sticker) => (
+      <View style={styles.stickerSelectorContainer}>
+        {/* Size selector */}
+        <View style={styles.sizeSelector}>
           <TouchableOpacity 
-            key={sticker.id} 
-            style={styles.stickerOption}
-            onPress={() => handleStickerSelect(sticker)}
+            style={[styles.sizeButton, selectedStickerSize === 0.75 && styles.selectedSize]} 
+            onPress={() => setSelectedStickerSize(0.75)}
           >
-            <Image source={sticker.source} style={styles.stickerImage} />
+            <Text style={styles.sizeButtonText}>S</Text>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+          <TouchableOpacity 
+            style={[styles.sizeButton, selectedStickerSize === 1 && styles.selectedSize]} 
+            onPress={() => setSelectedStickerSize(1)}
+          >
+            <Text style={styles.sizeButtonText}>M</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.sizeButton, selectedStickerSize === 1.5 && styles.selectedSize]} 
+            onPress={() => setSelectedStickerSize(1.5)}
+          >
+            <Text style={styles.sizeButtonText}>L</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {/* Sticker options */}
+        <ScrollView 
+          horizontal 
+          style={styles.stickerSelector}
+          showsHorizontalScrollIndicator={false}
+        >
+          {STICKERS.map((sticker) => (
+            <TouchableOpacity 
+              key={sticker.id} 
+              style={styles.stickerOption}
+              onPress={() => handleStickerSelect(sticker)}
+            >
+              <Image 
+                source={sticker.source} 
+                style={styles.stickerPreview} 
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
     );
   };
 
   // UI Rendering
   return (
     <View style={styles.container}>
+      <StatusBar translucent backgroundColor="transparent" />
       {photoUri ? (
-        // Photo preview with sticker editing
+        // Photo preview with sticker editing - Full screen
         <View style={styles.previewContainer}>
-          <ViewShot ref={viewShotRef} style={styles.viewShot} options={{ format: 'jpg', quality: 0.9 }}>
+          <ViewShot 
+            ref={viewShotRef} 
+            style={styles.viewShot} 
+            options={{ format: 'jpg', quality: 0.9 }}
+            onLayout={handleViewShotLayout}
+          >
             <Image source={{ uri: photoUri }} style={styles.previewImage} />
             
             {/* Display all placed stickers */}
@@ -237,6 +356,7 @@ const CameraScreen = () => {
                 id={item.id}
                 sticker={item.sticker}
                 position={item.position}
+                scale={item.scale}
               />
             ))}
           </ViewShot>
@@ -264,7 +384,7 @@ const CameraScreen = () => {
           </View>
         </View>
       ) : (
-        // Camera view
+        // Camera view - Full screen
         <CameraView 
           ref={cameraRef} 
           style={styles.camera} 
@@ -331,6 +451,9 @@ const styles = StyleSheet.create({
   camera: {
     flex: 1,
     justifyContent: 'space-between',
+    // Remove any constraints to make camera full screen
+    width: '100%',
+    height: '100%',
   },
   headerContainer: {
     alignItems: 'center',
@@ -384,16 +507,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    // Make preview container take up full screen
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#000',
   },
   viewShot: {
+    // Make viewShot take up full screen
     width: '100%',
-    height: '80%',
+    height: '100%',
     position: 'relative',
   },
   previewImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'contain',
+    // Changed from 'contain' to 'cover' to fill the screen completely
+    resizeMode: 'cover',
   },
   previewButtons: {
     flexDirection: 'row',
@@ -410,38 +539,68 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
   },
-  // Sticker selector styles
-  stickerSelector: {
+  // Sticker selector container and styles
+  stickerSelectorContainer: {
     position: 'absolute',
     bottom: 100,
     left: 0,
     right: 0,
+  },
+  sizeSelector: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  sizeButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    marginHorizontal: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#888',
+  },
+  selectedSize: {
+    borderColor: '#01DBC6',
+    borderWidth: 2,
+    backgroundColor: 'rgba(1, 219, 198, 0.3)',
+  },
+  sizeButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  stickerSelector: {
     backgroundColor: 'rgba(0,0,0,0.5)',
     paddingVertical: 10,
   },
   stickerOption: {
-    marginHorizontal: 10,
+    marginHorizontal: 8,
     borderRadius: 8,
-    overflow: 'hidden',
+    padding: 5,
     borderWidth: 2,
     borderColor: 'white',
-  },
-  stickerImage: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     width: 60,
     height: 60,
-    resizeMode: 'contain',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stickerPreview: {
+    width: 50,
+    height: 50,
   },
   // Placed sticker styles
   placedSticker: {
     position: 'absolute',
-    width: 100,
-    height: 100,
+    width: 80,
+    height: 80,
     zIndex: 999,
   },
   placedStickerImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'contain',
   },
   removeButton: {
     position: 'absolute',
@@ -453,6 +612,7 @@ const styles = StyleSheet.create({
     height: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1000,
   },
 });
 
