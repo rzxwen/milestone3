@@ -2,139 +2,345 @@ import React, { useState, useEffect } from "react";
 import { View, Text, Image, TouchableOpacity, FlatList, Alert, ActivityIndicator, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// FIX THIS CODE!!!!!!! // FIX THIS CODE!!!!!!! // FIX THIS CODE!!!!!!! 
-// FIX THIS CODE!!!!!!! // FIX THIS CODE!!!!!!! 
-
 const API_URL = "https://hsr-api.vercel.app/api/v1/characters"; // API from: https://hsr-api.vercel.app/api/v1/characters
-const STORAGE_KEY = "@saved_team"; // Key for AsyncStorage
+const STORAGE_KEY = "@hsr_saved_team"; //key for storing and retrieving team data in async 
 
+//main component 
 const TeamBuilder = () => {
+  //state variables 
   const [characters, setCharacters] = useState([]);
-  const [team, setTeam] = useState([]);
+  const [team, setTeam] = useState([]); //initally empty array to store the team 
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("All");
 
-  // Fetch characters from API
+  // array of element paths for characters Honkai: Star Rail
+  const paths = ["All", "Destruction", "Hunt", "Erudition", "Harmony", "Nihility", "Preservation", "Abundance"];
+
   useEffect(() => {
-    const fetchCharacters = async () => {
-      try {
-        const response = await fetch(API_URL);
-        const data = await response.json();
-        setCharacters(data);
+    const fetchCharacters = async () => { //async function to get character data 
+      try { //try catch for error handling 
+        const response = await fetch(API_URL); //fetch the api data 
+        const data = await response.json(); // wait for response from fetching 
+        
+        // Sort characters alphabetically
+        const sortedData = data.sort((a, b) => a.name.localeCompare(b.name));
+        setCharacters(sortedData); //sort the data 
       } catch (error) {
-        console.error("Error fetching characters:", error);
-        Alert.alert("Error", "Failed to load characters.");
+        console.error("error fetching characters:", error); //catch the error and 
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCharacters();
-    loadTeam(); // Load saved team on app start
+    fetchCharacters(); //call fetchCharacters function 
+    loadTeam(); //call load team 
   }, []);
 
-  // Load team from AsyncStorage
   const loadTeam = async () => {
     try {
-      const savedTeam = await AsyncStorage.getItem(STORAGE_KEY);
-      if (savedTeam) {
-        setTeam(JSON.parse(savedTeam));
+      const savedTeam = await AsyncStorage.getItem(STORAGE_KEY); //get data from async
+      if (savedTeam) { //if there is a saved team 
+        setTeam(JSON.parse(savedTeam)); //update the state, turn the json into object 
       }
     } catch (error) {
       console.error("Error loading team:", error);
     }
   };
 
-  // Save team to AsyncStorage when user presses "Save Team" button
+  //function for saving team 
   const saveTeam = async () => {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(team));
-      Alert.alert("Success", "Your team has been saved!");
-    } catch (error) {
+    try { //try catch to handle errors
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(team)); //convert array to json string
+      Alert.alert("Success", "Team saved successfully");
+    } catch (error) { //catch the errors 
       console.error("Error saving team:", error);
     }
   };
 
-  // Add a character to the team
+  //function to add characters into team 
   const addToTeam = (character) => {
-    if (team.length < 4) {
-      setTeam([...team, character]);
+    if (team.length < 4) { //teams can max be 4 characters
+      // check if character is already in team
+      if (team.some(member => member.id === character.id)) { //check if character has already been selected 
+        Alert.alert("Character Already Selected", `${character.name} is already in your team`);
+        return;
+      }
+      
+      setTeam([...team, character]); //save the character to team by creating new array
     } else {
-      Alert.alert("Team Full", "Your team can have only 4 members.");
+      Alert.alert("Team Full", " Team can only have 4 members");
     }
   };
 
-  // Remove a character from the team
-  const removeFromTeam = (id) => {
-    setTeam(team.filter((member) => member.id !== id));
+  const removeFromTeam = (character) => { //function to remove character 
+    setTeam(team.filter((member) => member.id !== character.id)); //create new array without character
   };
+
+  // Filter characters by path
+  const filteredCharacters = filter === "All" 
+    ? characters 
+    : characters.filter(char => char.path === filter); //filters characters based on path 
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Honkai: Star Rail Team Builder</Text>
+      <Text style={styles.title}>HSR Team Builder</Text>
 
-      {loading ? <ActivityIndicator size="large" color="#007AFF" /> : null}
-
-      {/* Character Selection */}
-      <Text style={styles.subtitle}>Select Characters</Text>
-      <FlatList
-        data={characters}
-        keyExtractor={(item) => item.id.toString()}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.characterCard} onPress={() => addToTeam(item)}>
-            <Image source={{ uri: item.image }} style={styles.characterImage} />
-            <Text style={styles.characterName}>{item.name}</Text>
-            <Text style={styles.characterRole}>{item.role}</Text>
-          </TouchableOpacity>
-        )}
-      />
-
-      {/* Team Display */}
-      <Text style={styles.subtitle}>Your Team</Text>
-      <FlatList
-        data={team}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.teamMember}>
-            <Image source={{ uri: item.image }} style={styles.characterImage} />
-            <View style={styles.teamMemberInfo}>
-              <Text style={styles.characterName}>{item.name}</Text>
-              <Text style={styles.characterRole}>{item.role}</Text>
-              <TouchableOpacity onPress={() => removeFromTeam(item.id)} style={styles.removeButton}>
-                <Text style={styles.removeButtonText}>Remove</Text>
-              </TouchableOpacity>
-            </View>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3498db" />
+          <Text style={styles.loadingText}>Loading characters...</Text>
+        </View>
+      ) : (
+        <>
+          {/* Path filter section */}
+          <View style={styles.filterContainer}>
+            <Text style={styles.filterLabel}>Filter by Path:</Text>
+            <FlatList
+              data={paths}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.filterButton,
+                    filter === item && styles.filterButtonActive,
+                  ]}
+                  onPress={() => setFilter(item)}
+                >
+                  <Text style={[
+                    styles.filterButtonText,
+                    filter === item && styles.filterButtonTextActive
+                  ]}>
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
           </View>
-        )}
-      />
 
-      {/* Save Team Button */}
-      {team.length > 0 && (
-        <TouchableOpacity style={styles.saveButton} onPress={saveTeam}>
-          <Text style={styles.saveButtonText}>Save Team</Text>
-        </TouchableOpacity>
+          {/* Character Selection */}
+          <Text style={styles.sectionTitle}>Characters</Text>
+          <FlatList //flatlist to display characters
+            data={filteredCharacters}
+            keyExtractor={(item) => item.id.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <TouchableOpacity 
+                style={styles.characterCard} 
+                onPress={() => addToTeam(item)}
+              >
+                <View style={styles.characterContent}>
+                  <Image source={{ uri: item.image }} style={styles.characterImage} />
+                  <Text style={styles.characterName}>{item.name}</Text>
+                  <View style={styles.characterDetails}>
+                    <Text style={styles.characterDetail}>{item.element}</Text>
+                    <Text style={styles.characterDetail}>{item.path}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+
+          {/* Team Display section */}
+          <Text style={styles.sectionTitle}>Your Team</Text>
+          {team.length === 0 ? (
+            <View style={styles.emptyTeamContainer}>
+              <Text style={styles.emptyTeamText}>Your team is empty. Select characters to build your team.</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={team}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <View style={styles.teamMember}>
+                  <Image source={{ uri: item.image }} style={styles.teamMemberImage} />
+                  <View style={styles.teamMemberInfo}>
+                    <Text style={styles.teamMemberName}>{item.name}</Text>
+                    <View style={styles.teamMemberDetails}>
+                      <Text style={styles.teamMemberDetail}>{item.element}</Text>
+                      <Text style={styles.teamMemberDetail}>{item.path}</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity 
+                    onPress={() => removeFromTeam(item)} //when click remove from team 
+                    style={styles.removeButton}
+                  >
+                    <Text style={styles.removeButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            />
+          )}
+
+          {/* Save Team Button */}
+          {team.length > 0 && (
+            <TouchableOpacity style={styles.saveButton} onPress={saveTeam}>
+              <Text style={styles.saveButtonText}>Save Team</Text>
+            </TouchableOpacity>
+          )}
+        </>
       )}
     </View>
   );
 };
 
-// Styles
+// dark style
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#f5f5f5" },
-  title: { fontSize: 24, fontWeight: "bold", textAlign: "center", marginBottom: 20 },
-  subtitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-  characterCard: { backgroundColor: "#fff", padding: 10, marginRight: 10, alignItems: "center", borderRadius: 8, elevation: 2 },
-  characterImage: { width: 80, height: 80, borderRadius: 40, marginBottom: 5 },
-  characterName: { fontSize: 16, fontWeight: "bold" },
-  characterRole: { fontSize: 14, color: "gray" },
-  teamMember: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", padding: 10, marginBottom: 10, borderRadius: 8, elevation: 2 },
-  teamMemberInfo: { flex: 1, marginLeft: 10 },
-  removeButton: { backgroundColor: "#ff4d4d", padding: 5, borderRadius: 5, marginTop: 5 },
-  removeButtonText: { color: "white", fontWeight: "bold" },
-  saveButton: { backgroundColor: "#007AFF", padding: 10, borderRadius: 8, alignItems: "center", marginTop: 10 },
-  saveButtonText: { color: "white", fontSize: 16, fontWeight: "bold" },
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: "#121212", 
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#3498db", // Blue accent
+    textAlign: "center",
+    marginTop: 100,
+    marginBottom: 50,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    color: "#ffffff",
+    marginTop: 10,
+  },
+  filterContainer: {
+    marginBottom: 15,
+  },
+  filterLabel: {
+    color: "#ffffff",
+    marginBottom: 8,
+  },
+  filterButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    borderRadius: 4,
+    backgroundColor: "#1e1e1e",  
+  },
+  filterButtonActive: {
+    backgroundColor: "#3498db", 
+  },
+  filterButtonText: {
+    color: "#ffffff",
+  },
+  filterButtonTextActive: {
+    color: "#ffffff",
+    fontWeight: "bold",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#ffffff",
+    marginBottom: 10,
+    marginTop: 10,
+  },
+  characterCard: {
+    width: 120,
+    height: 180,
+    marginRight: 10,
+    backgroundColor: "#1e1e1e",
+    borderRadius: 6,
+    overflow: "hidden",
+  },
+  characterContent: {
+    padding: 10,
+    alignItems: "center",
+  },
+  characterImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    marginBottom: 8,
+  },
+  characterName: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#ffffff",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  characterDetails: {
+    flexDirection: "column",
+    alignItems: "center",
+  },
+  characterDetail: {
+    fontSize: 12,
+    color: "#3498db", // Blue accent
+    marginBottom: 2,
+  },
+  emptyTeamContainer: {
+    backgroundColor: "#1e1e1e",
+    padding: 16,
+    borderRadius: 6,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  emptyTeamText: {
+    color: "#ffffff",
+    textAlign: "center",
+  },
+  teamMember: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1e1e1e",
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 6,
+  },
+  teamMemberImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  teamMemberInfo: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  teamMemberName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#ffffff",
+  },
+  teamMemberDetails: {
+    flexDirection: "row",
+    marginTop: 4,
+  },
+  teamMemberDetail: {
+    fontSize: 12,
+    color: "#3498db", 
+    marginRight: 10,
+  },
+  removeButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#333333",
+    justifyContent: "center",
+    alignItems: "center", 
+  },
+  removeButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+  },
+  saveButton: {
+    backgroundColor: "#3498db", 
+    padding: 12,
+    borderRadius: 6,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  saveButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
 });
 
 export default TeamBuilder;
-
