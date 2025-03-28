@@ -10,18 +10,18 @@ const TeamBuilder = () => {
   //state variables 
   const [characters, setCharacters] = useState([]);
   const [team, setTeam] = useState([]); //initally empty array to store the team 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); 
   const [filter, setFilter] = useState("All");
 
   // array of element paths for characters Honkai: Star Rail
   const paths = ["All", "Destruction", "Hunt", "Erudition", "Harmony", "Nihility", "Preservation", "Abundance"];
 
-  useEffect(() => {
+  useEffect(() => { //hook for fetching and updating data
     const fetchCharacters = async () => { //async function to get character data 
       try { //try catch for error handling 
         const response = await fetch(API_URL); //fetch the api data 
-        const data = await response.json(); // wait for response from fetching 
-        
+        const data = await response.json(); // wait for response from fetching, parse to json
+
         // Sort characters alphabetically
         const sortedData = data.sort((a, b) => a.name.localeCompare(b.name));
         setCharacters(sortedData); //sort the data 
@@ -65,7 +65,7 @@ const TeamBuilder = () => {
         Alert.alert("Character Already Selected", `${character.name} is already in your team`);
         return;
       }
-      
+
       setTeam([...team, character]); //save the character to team by creating new array
     } else {
       Alert.alert("Team Full", " Team can only have 4 members");
@@ -77,8 +77,8 @@ const TeamBuilder = () => {
   };
 
   // Filter characters by path
-  const filteredCharacters = filter === "All" 
-    ? characters 
+  const filteredCharacters = filter === "All"
+    ? characters
     : characters.filter(char => char.path === filter); //filters characters based on path 
 
   return (
@@ -127,8 +127,8 @@ const TeamBuilder = () => {
             horizontal
             showsHorizontalScrollIndicator={false}
             renderItem={({ item }) => (
-              <TouchableOpacity 
-                style={styles.characterCard} 
+              <TouchableOpacity
+                style={styles.characterCard}
                 onPress={() => addToTeam(item)}
               >
                 <View style={styles.characterContent}>
@@ -163,7 +163,7 @@ const TeamBuilder = () => {
                       <Text style={styles.teamMemberDetail}>{item.path}</Text>
                     </View>
                   </View>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => removeFromTeam(item)} //when click remove from team 
                     style={styles.removeButton}
                   >
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#121212", 
+    backgroundColor: "#121212",
   },
   title: {
     fontSize: 24,
@@ -222,10 +222,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginRight: 8,
     borderRadius: 4,
-    backgroundColor: "#1e1e1e",  
+    backgroundColor: "#1e1e1e",
   },
   filterButtonActive: {
-    backgroundColor: "#3498db", 
+    backgroundColor: "#3498db",
   },
   filterButtonText: {
     color: "#ffffff",
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   },
   teamMemberDetail: {
     fontSize: 12,
-    color: "#3498db", 
+    color: "#3498db",
     marginRight: 10,
   },
   removeButton: {
@@ -323,14 +323,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#333333",
     justifyContent: "center",
-    alignItems: "center", 
+    alignItems: "center",
   },
   removeButtonText: {
     color: "#ffffff",
     fontSize: 14,
   },
   saveButton: {
-    backgroundColor: "#3498db", 
+    backgroundColor: "#3498db",
     padding: 12,
     borderRadius: 6,
     alignItems: "center",
