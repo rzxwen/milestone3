@@ -38,7 +38,7 @@ const TeamBuilder = () => {
   //state variables 
   const [characters, setCharacters] = useState([]);
   const [team, setTeam] = useState([]); //initally empty array to store the team 
-  const [loading, setLoading] = useState(true); 
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("All");
   const [recommendedTeams, setRecommendedTeams] = useState([]);
   const [showRecommended, setShowRecommended] = useState(false);
@@ -55,7 +55,7 @@ const TeamBuilder = () => {
         // Sort characters alphabetically
         const sortedData = data.sort((a, b) => a.name.localeCompare(b.name));
         setCharacters(sortedData); //sort the data 
-        
+
         // Process recommended teams after loading characters
         processRecommendedTeams(sortedData);
       } catch (error) {
@@ -74,17 +74,17 @@ const TeamBuilder = () => {
     const processed = RECOMMENDED_TEAMS.map(team => {
       const teamMembers = team.members.map(memberName => {
         // Find character by name (case insensitive partial match)
-        return charactersList.find(char => 
+        return charactersList.find(char =>
           char.name.toLowerCase().includes(memberName.toLowerCase())
         );
       }).filter(member => member !== undefined);
-      
+
       return {
         ...team,
         memberObjects: teamMembers
       };
     });
-    
+
     setRecommendedTeams(processed);
   };
 
@@ -244,28 +244,28 @@ const TeamBuilder = () => {
               <Text style={styles.recommendedDescription}>
                 Select one of these pre-built teams optimized for different playstyles
               </Text>
-              
+
               {recommendedTeams.map((recTeam) => (
                 <View key={recTeam.id} style={styles.recommendedTeamCard}>
                   <View style={styles.recommendedTeamHeader}>
                     <Text style={styles.recommendedTeamName}>{recTeam.name}</Text>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.applyButton}
                       onPress={() => applyRecommendedTeam(recTeam)}
                     >
                       <Text style={styles.applyButtonText}>Apply</Text>
                     </TouchableOpacity>
                   </View>
-                  
+
                   <Text style={styles.recommendedTeamDescription}>{recTeam.description}</Text>
-                  
+
                   <View style={styles.recommendedTeamMembers}>
                     {recTeam.memberObjects.map((character, index) => (
                       character && (
                         <View key={index} style={styles.recommendedTeamMember}>
-                          <Image 
-                            source={{ uri: character.image }} 
-                            style={styles.recommendedMemberImage} 
+                          <Image
+                            source={{ uri: character.image }}
+                            style={styles.recommendedMemberImage}
                           />
                           <Text style={styles.recommendedMemberName}>{character.name}</Text>
                         </View>
