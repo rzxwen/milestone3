@@ -20,37 +20,37 @@ export default function SignInScreen() {
   const auth = firebase_auth;
   const navigation = useNavigation();
   
-  // Check if user is already authenticated when component mounts
+  // check if user is already authenticated 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // User is already signed in
+        // user is already signed in
         console.log("User already signed in:", user.email);
         
         try {
-          // Store user info in AsyncStorage
+          // store user info in AsyncStorage
           await AsyncStorage.setItem('userEmail', user.email);
           await AsyncStorage.setItem('userId', user.uid);
           
-          // Update the last login timestamp silently
+          // update the last login timestamp silently
           const userRef = doc(firestore_db, "users", user.uid);
           await setDoc(userRef, {
             lastLogin: serverTimestamp()
           }, { merge: true });
           
-          // Navigate to app screen (matches your App.js navigation structure)
+          // navigate to app screen
           navigation.replace('App');
         } catch (error) {
           console.error("Error saving user data:", error);
           setIsLoading(false);
         }
       } else {
-        // No user is signed in
+        // no user is signed in
         setIsLoading(false);
       }
     });
     
-    // Cleanup subscription on unmount
+    // cleanup subscription on unmount to avoid memory leak and updating state on unmounted component
     return () => unsubscribe();
   }, []);
   
@@ -65,20 +65,19 @@ export default function SignInScreen() {
       const response = await createUserWithEmailAndPassword(auth, email, password);
       console.log(response);
       
-      // Create a user profile document in Firestore
+      // create a user profile document in Firestore
       const userRef = doc(firestore_db, "users", response.user.uid);
       await setDoc(userRef, {
         email: response.user.email,
         createdAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
-        displayName: email.split('@')[0], // Simple default display name
+        displayName: email.split('@')[0], // simple default display name
       });
       
-      // Store user info in AsyncStorage
+      // store user info in AsyncStorage
       await AsyncStorage.setItem('userEmail', response.user.email);
       await AsyncStorage.setItem('userId', response.user.uid);
       
-      // The App.js already listens for auth state changes and will redirect automatically
       alert("Sign up success!");
     } catch (error) {
       console.log(error.message);
@@ -99,19 +98,16 @@ export default function SignInScreen() {
       const response = await signInWithEmailAndPassword(auth, email, password);
       console.log(response);
       
-      // Update user's last login timestamp
+      // update user's last login timestamp
       const userRef = doc(firestore_db, "users", response.user.uid);
       await setDoc(userRef, {
         lastLogin: serverTimestamp()
-      }, { merge: true }); // merge: true ensures we don't overwrite existing data
+      }, { merge: true }); // merge to avoid overwriting existing data
       
-      // Store user info in AsyncStorage
+      // store user info in AsyncStorage
       await AsyncStorage.setItem('userEmail', response.user.email);
       await AsyncStorage.setItem('userId', response.user.uid);
       
-      // The App.js already listens for auth state changes and will redirect automatically
-      // But we can also manually navigate if needed
-      navigation.replace('App');
     } catch (error) {
       console.log(error.message);
       alert(error.message);
@@ -120,6 +116,7 @@ export default function SignInScreen() {
     }
   };
   
+  // render the sign-in screen if not loading
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -129,6 +126,7 @@ export default function SignInScreen() {
     );
   }
   
+  // sign-in form
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Sign In</Text>

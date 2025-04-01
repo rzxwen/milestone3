@@ -22,7 +22,7 @@ const CameraType = {
   front: 'front',
 };
 
-// sticker assets
+// sticker assets to place on pictures
 const STICKERS = [
     { id: 1, source: require('../../assets/stickers/pompom1.png') },
     { id: 2, source: require('../../assets/stickers/pompom2.png') },
@@ -47,7 +47,7 @@ const CameraScreen = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [finalImageUri, setFinalImageUri] = useState(null);
   const [viewShotLayout, setViewShotLayout] = useState({ width: 0, height: 0 });
-  const [showDeleteButtons, setShowDeleteButtons] = useState(true); // delete button visibility
+  const [showDeleteButtons, setShowDeleteButtons] = useState(true); // delete button visibility after taking a picture so it does not show in the final image
   
   const cameraRef = useRef(null);
   const viewShotRef = useRef(null);
@@ -165,7 +165,7 @@ const CameraScreen = () => {
     );
   };
 
-  // Add a new function to update sticker scale
+  // updates the stickers scale based on pinch gesture and keeps it in sync with the parent component
   const updateStickerScale = (id, newScale) => {
     setPlacedStickers(currentStickers => 
       currentStickers.map(item => {
@@ -242,37 +242,34 @@ const CameraScreen = () => {
         onPanResponderMove: (evt, gestureState) => {
           const touches = evt.nativeEvent.touches;
           
-          // Check if this is a pinch gesture (2 touches)
+          // check for a pinch gesture from user
           if (touches.length === 2) {
-            // Calculate the distance between the two touches
             const dx = touches[0].pageX - touches[1].pageX;
             const dy = touches[0].pageY - touches[1].pageY;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            // If this is the start of a pinch, save the initial distance
             if (!initialDistanceRef.current) {
               initialDistanceRef.current = distance;
               return;
             }
             
-            // Calculate the scale factor based on the change in distance
+            // scale the sticker based on the pinch distance
             let newScale = currentScaleRef.current * (distance / initialDistanceRef.current);
             
-            // Limit the scale to reasonable values (0.5 to 3)
+            // limit the scale so the sticker is not too big
             newScale = Math.max(0.5, Math.min(3, newScale));
             
-            // Update the scale
+            // update the scale ref and state
             currentScaleRef.current = newScale;
             setStickerScale(newScale);
             
-            // Don't process drag movement during pinch
             return;
           } else if (initialDistanceRef.current) {
-            // If we were pinching and now we're not, reset initial distance
+            // if we were pinching and stopped to the reset initial distance
             initialDistanceRef.current = null;
           }
           
-          // Handle normal drag movement
+          // drag movement handling
           const newX = positionRef.current.x + (gestureState.dx - lastGestureState.current.dx);
           const newY = positionRef.current.y + (gestureState.dy - lastGestureState.current.dy);
           
@@ -293,7 +290,7 @@ const CameraScreen = () => {
           // when the gesture is finished, update the parent component state
           updateStickerPosition(id, positionRef.current);
           
-          // Always update the scale when the gesture ends
+          // always update the scale when the gesture ends
           updateStickerScale(id, currentScaleRef.current);
         },
       })
@@ -311,14 +308,14 @@ const CameraScreen = () => {
           }
         ]}
       >
-        {/* Image sticker */}
+        {/* image sticker */}
         <Image
           source={sticker.source}
           style={styles.placedStickerImage}
           resizeMode="contain"
         />
         
-        {/* Remove button - only show when editing and showDeleteButtons is true */}
+        {/* rmove button - only show when editing and taking pictures */}
         {isEditing && showDeleteButtons && (
           <TouchableOpacity 
             style={styles.removeButton}
@@ -336,9 +333,7 @@ const CameraScreen = () => {
   // sticker selector component
   const StickerSelector = () => {
     return (
-      <View style={styles.stickerSelectorContainer}>
-        {/* Removed size selector buttons */}
-        
+      <View style={styles.stickerSelectorContainer}>        
         {/* sticker selection from horizontal menu */}
         <ScrollView 
           horizontal 
@@ -360,8 +355,8 @@ const CameraScreen = () => {
           ))}
         </ScrollView>
         
-        {/* Instruction text for pinch gesture */}
-        <Text style={styles.gestureHint}>Pinch to resize stickers</Text>
+        {/* instruction text for pinch gesture */}
+        <Text style={styles.gestureHint}>PanResponderinch to resize stickers!</Text>
       </View>
     );
   };
@@ -489,7 +484,7 @@ const styles = StyleSheet.create({
   camera: {
     flex: 1,
     justifyContent: 'space-between',
-    // Remove any constraints to make camera full screen
+    // full screen camera
     width: '100%',
     height: '100%',
   },
@@ -545,13 +540,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    // Make preview container take up full screen
+    // full screen preview
     width: '100%',
     height: '100%',
     backgroundColor: '#000',
   },
   viewShot: {
-    // Make viewShot take up full screen
+    // full screen viewshot
     width: '100%',
     height: '100%',
     position: 'relative',
@@ -559,7 +554,7 @@ const styles = StyleSheet.create({
   previewImage: {
     width: '100%',
     height: '100%',
-    // Changed from 'contain' to 'cover' to fill the screen completely
+    // cover to fill the screen completely with the preview for better viewing
     resizeMode: 'cover',
   },
   previewButtons: {
@@ -577,7 +572,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
   },
-  // Sticker selector container and styles
+  // sticker selector styling
   stickerSelectorContainer: {
     position: 'absolute',
     bottom: 100,
@@ -604,7 +599,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
   },
-  // Placed sticker styles
+  // placed sticker styling
   placedSticker: {
     position: 'absolute',
     width: 80,

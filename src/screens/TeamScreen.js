@@ -16,7 +16,7 @@ import { firebase_auth } from '../firebaseConfig';
 import { firestore_db } from '../firebaseConfig';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
 
-// Character data with actual image imports since files are now in place
+// character data with the character icons
 const CHARACTERS = [
   { id: '1', name: 'Silver Wolf', element: 'Quantum', path: 'Nihility', rarity: 5, image: require('../../assets/characters/silverwolf.png') },
   { id: '2', name: 'Kafka', element: 'Lightning', path: 'Nihility', rarity: 5, image: require('../../assets/characters/kafka.png') },
@@ -38,12 +38,12 @@ const TeamScreen = () => {
   
   const currentUser = firebase_auth.currentUser;
 
-  // Load team data from Firestore when component mounts
+  // load team data from Firestore when component mounts
   useEffect(() => {
     loadTeamData();
   }, []);
 
-  // Function to load team data from Firestore
+  // load user's team data from Firestore 
   const loadTeamData = async () => {
     if (!currentUser) {
       setLoading(false);
@@ -67,7 +67,7 @@ const TeamScreen = () => {
     }
   };
 
-  // Function to save team data to Firestore
+  // save user's team data to Firestore
   const saveTeamData = async () => {
     if (!currentUser) {
       Alert.alert("Error", "You must be logged in to save a team");
@@ -83,7 +83,7 @@ const TeamScreen = () => {
     try {
       const userRef = doc(firestore_db, "users", currentUser.uid);
       
-      // Check if user document exists and then update the entire team object
+      // check if user document exists and then update the entire team object if the user changes the team
       const userDoc = await getDoc(userRef);
       
       if (userDoc.exists()) {
@@ -116,14 +116,14 @@ const TeamScreen = () => {
     }
   };
 
-  // Function to add a character to the team
+  // limitations for amount of characters in the team
   const addToTeam = (character) => {
     if (team.length >= 4) {
       Alert.alert("Team Full", "You can only have up to 4 characters in your team");
       return;
     }
     
-    // Check if character is already in the team
+    // check if character is already in the team
     if (team.some(member => member.id === character.id)) {
       Alert.alert("Already Added", `${character.name} is already in your team`);
       return;
@@ -133,19 +133,19 @@ const TeamScreen = () => {
     setModalVisible(false);
   };
 
-  // Function to remove a character from the team
+  // remove a character from the team
   const removeFromTeam = (characterId) => {
     setTeam(team.filter(character => character.id !== characterId));
   };
 
-  // Filtered characters based on search query
+  // filter characters based on search query
   const filteredCharacters = CHARACTERS.filter(character => 
     character.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     character.element.toLowerCase().includes(searchQuery.toLowerCase()) ||
     character.path.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Character selection modal
+  // character selection modal
   const CharacterModal = () => (
     <Modal
       animationType="slide"
@@ -199,7 +199,7 @@ const TeamScreen = () => {
     </Modal>
   );
 
-  // Team name editor
+  // team name editor bar
   const EditableName = () => (
     <View style={styles.teamNameContainer}>
       <TextInput

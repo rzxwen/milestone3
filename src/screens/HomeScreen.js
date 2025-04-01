@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 
 const { height, width } = Dimensions.get('window');
 
-// Data
+// tracked daily tasks
 const dailyTasks = [
   { id: 1, name: "Daily Training", completed: false, rewards: "Credits, EXP" },
   { id: 2, name: "Complete 1 Calyx (Golden)", completed: false, rewards: "Relic EXP" },
@@ -32,14 +32,13 @@ const HonkaiStarRailApp = () => {
   const [activeTab, setActiveTab] = useState("news");
   const [tasks, setTasks] = useState(dailyTasks);
   const drawerHeight = height * 0.4;
-  const peekHeight = 50; // Increased peek height for better visibility
+  const peekHeight = 50; // increased peek height for better visibility of the drawer menu
   const drawerPosition = useRef(new Animated.Value(drawerHeight - peekHeight)).current;
-  const startPosition = useRef(0); // Add a ref to store the starting drawer position
+  const startPosition = useRef(0); // ref to store the starting drawer position
   const navigation = useNavigation();
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
-    // Set the starting position on gesture start
     onPanResponderGrant: (evt, gestureState) => {
       startPosition.current = drawerPosition.__getValue();
     },
@@ -49,14 +48,14 @@ const HonkaiStarRailApp = () => {
     },
     onPanResponderRelease: (evt, gestureState) => {
       if (gestureState.vy < -0.5 || drawerPosition.__getValue() < (drawerHeight - peekHeight) / 2) {
-        // Open fully
+        // swipe up to open the drawer
         Animated.spring(drawerPosition, {
           toValue: 0,
           useNativeDriver: false,
           bounciness: 0,
         }).start();
       } else {
-        // Return to peek state
+        // return to peek position
         Animated.spring(drawerPosition, {
           toValue: drawerHeight - peekHeight,
           useNativeDriver: false,
@@ -66,12 +65,14 @@ const HonkaiStarRailApp = () => {
     },
   });
 
+  // allows the uers to keep track of their daily tasks
   const toggleTask = (taskId) => {
     setTasks(tasks.map(task =>
       task.id === taskId ? { ...task, completed: !task.completed } : task
     ));
   };
 
+  // toggle function so the user can just click the drawer handle to open and close the drawer instead of dragging
   const toggleDrawer = () => {
     Animated.spring(drawerPosition, {
       toValue: drawerPosition.__getValue() > (drawerHeight - peekHeight) / 2 ? 0 : drawerHeight - peekHeight,
@@ -93,10 +94,10 @@ const HonkaiStarRailApp = () => {
           text: "Sign Out",
           onPress: async () => {
             try {
-              // Clear AsyncStorage user data
+              // clear AsyncStorage user data so the user can sign in again
               await AsyncStorage.multiRemove(['userEmail', 'userId']);
               
-              // Sign out from Firebase
+              // sign out from Firebase as well
               await firebase_auth.signOut();
               
               console.log("User signed out successfully");
@@ -112,7 +113,7 @@ const HonkaiStarRailApp = () => {
 
   return (
     <View style={styles.container}>
-      {/* Main Content */}
+      {/* main content */}
       <View style={styles.contentWrapper}>
         <View style={styles.header}>
           <Text style={styles.title}>Pompom's Train Station</Text>
@@ -121,7 +122,7 @@ const HonkaiStarRailApp = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Tab buttons */}
+        {/* tab buttons */}
         <View style={styles.toggleContainer}>
           <TouchableOpacity
             style={[styles.toggleButton, activeTab === "news" && styles.toggleButtonActive]}
@@ -143,7 +144,7 @@ const HonkaiStarRailApp = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Tab content */}
+        {/* tab content */}
         <View style={styles.contentContainer}>
           {activeTab === "news" && (
             <FlatList
@@ -166,7 +167,7 @@ const HonkaiStarRailApp = () => {
               data={banners}
               renderItem={({ item }) => (
                 <View style={styles.bannerItem}>
-                  {/* Modified images container */}
+                  {/* shows the character images for the corresponding banners */}
                   <View style={styles.bannerImagesContainer}>
                     {item.character === "Silver Wolf" && (
                       <Image source={require('../../assets/characters/silverwolf.png')} style={styles.bannerCharacterImage} />
@@ -206,12 +207,11 @@ const HonkaiStarRailApp = () => {
         </View>
       </View>
 
-      {/* Swipeable Drawer - Now definitely visible! */}
       <Animated.View
         style={[
           styles.drawer,
           {
-            height: drawerHeight + peekHeight, // Extra space for the handle
+            height: drawerHeight + peekHeight, // extra space for the handle, made sure the daily task text is visible
             transform: [{ translateY: drawerPosition }],
           }
         ]}
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   contentWrapper: {
     flex: 1,
     padding: 16,
-    marginBottom: 30, // Space for the drawer handle to peek
+    marginBottom: 30, // space for the drawer handle to peek
   },
   header: {
     flexDirection: 'row',
@@ -377,12 +377,12 @@ const styles = StyleSheet.create({
     height: 40,
     marginBottom: 4,
   },
-  // Drawer styles - guaranteed visible now
+  // drawer styles
   drawer: {
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: -10, // Updated to match increased peek height
+    bottom: -10, // update to match increased peek height
     backgroundColor: '#1e1e1e',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,

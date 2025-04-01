@@ -3,9 +3,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from './HomeScreen';
 import TeamScreen from './TeamScreen';
 import CameraScreen from "./CameraScreen";
-import RedditScreen from "./RedditScreen"; // Import the new RedditScreen
-
-import { Ionicons } from '@expo/vector-icons'; // For tab icons
+import RedditScreen from "./RedditScreen"; 
+import { Ionicons } from '@expo/vector-icons'; // tab icons
 
 const Tab = createBottomTabNavigator();
 
@@ -28,16 +27,16 @@ const TabNavigator = () => {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#01DBC6', // Changed to match your app's teal color
+        tabBarActiveTintColor: '#01DBC6', // teal color
         tabBarInactiveTintColor: 'gray',
         tabBarStyle: {
-          backgroundColor: '#1A1A1B', // Dark background for the tab bar
-          borderTopColor: '#343536', // Subtle border color
+          backgroundColor: '#1A1A1B', // dark color
+          borderTopColor: '#343536', // dark border color
         },
         tabBarLabelStyle: {
           fontSize: 12,
         },
-        headerShown: false, // Hide the header for all tabs
+        headerShown: false, // hide the header for all tabs
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />

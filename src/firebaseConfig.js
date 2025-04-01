@@ -1,4 +1,3 @@
-//initialize a firebase app in the react native project
 import { initializeApp } from 'firebase/app';
 import { 
   initializeAuth, 
@@ -20,7 +19,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Auth with AsyncStorage persistence
+// Initialize Auth with AsyncStorage persistence as
 const firebase_auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage)
 });

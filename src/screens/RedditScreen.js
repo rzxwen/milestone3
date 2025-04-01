@@ -130,13 +130,13 @@ const RedditScreen = () => {
     return `${Math.floor(diff / 31536000)} year${Math.floor(diff / 31536000) !== 1 ? 's' : ''} ago`; // year 
   };
 
-  // Modified function: open post inside in-app webview modal
+  // open post inside in-app webview modal, gets the permalink from the Reddit API response
   const openPostInBrowser = (permalink) => {
     setWebviewUrl(`https://reddit.com${permalink}`);
     setShowWebview(true);
   };
 
-  // Modified renderWebviewModal function:
+  // webview modal for displaying Reddit posts
   const renderWebviewModal = () => (
     <Modal
       visible={showWebview}
