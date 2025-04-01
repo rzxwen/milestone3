@@ -131,7 +131,6 @@ export default function SignInScreen() {
   
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Honkai Star Rail Companion</Text>
       <Text style={styles.header}>Sign In</Text>
       
       <TextInput
@@ -200,14 +199,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: 30,
     fontWeight: "bold",
     color: "#01DBC6",
     textAlign: "center",
     marginBottom: 16,
   },
   header: {
-    fontSize: 28,
+    fontSize: 35,
     fontWeight: "bold",
     color: "#ffffff",
     textAlign: "center",

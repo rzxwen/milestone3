@@ -1,7 +1,6 @@
-
 // since this uses Reddit's public JSON API it needs no authentication to fetch and display posts
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // added useRef
 import {
   View,
   Text,
@@ -14,9 +13,11 @@ import {
   RefreshControl,
   SafeAreaView,
   StatusBar,
-  TextInput
+  TextInput,
+  Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { WebView } from 'react-native-webview'; // added import
 
 // list of Star Rail character subreddits
 const CHARACTER_SUBREDDITS = [
@@ -49,6 +50,10 @@ const RedditScreen = () => {
   const [sortBy, setSortBy] = useState('hot'); // Default sort order
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
+  const [showWebview, setShowWebview] = useState(false);       // new state for modal visibility
+  const [webviewUrl, setWebviewUrl] = useState('');              // new state for URL
+  const [canGoBack, setCanGoBack] = useState(false); // new state for webview history
+  const webViewRef = useRef(null);                  // new WebView ref
 
   // fetch posts from selected subreddit, code taken from https://www.reddit.com/dev/api/
   const fetchPosts = async (subreddit, sort = sortBy) => {
@@ -125,10 +130,44 @@ const RedditScreen = () => {
     return `${Math.floor(diff / 31536000)} year${Math.floor(diff / 31536000) !== 1 ? 's' : ''} ago`; // year 
   };
 
-  // open the clicked post in browser
+  // Modified function: open post inside in-app webview modal
   const openPostInBrowser = (permalink) => {
-    Linking.openURL(`https://reddit.com${permalink}`);
+    setWebviewUrl(`https://reddit.com${permalink}`);
+    setShowWebview(true);
   };
+
+  // Modified renderWebviewModal function:
+  const renderWebviewModal = () => (
+    <Modal
+      visible={showWebview}
+      animationType="slide"
+      onRequestClose={() => setShowWebview(false)}
+    >
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#272729' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12 }}>
+          <TouchableOpacity 
+            onPress={() => {
+              if (canGoBack && webViewRef.current) {
+                webViewRef.current.goBack();
+              } else {
+                setShowWebview(false);
+              }
+            }}
+            style={{ padding: 8 }} // added padding to back button
+          >
+            <Ionicons name="arrow-back" size={24} color="#D7DADC" />
+          </TouchableOpacity>
+          <Text style={{ flex: 1, textAlign: 'center', color: '#D7DADC', fontSize: 18 }}>Viewing Post</Text>
+        </View>
+        <WebView 
+          ref={webViewRef}
+          source={{ uri: webviewUrl }} 
+          style={{ flex: 1 }}
+          onNavigationStateChange={(navState) => setCanGoBack(navState.canGoBack)}
+        />
+      </SafeAreaView>
+    </Modal>
+  );
 
   // reddit post rendering
   const renderPostItem = ({ item }) => {
@@ -203,126 +242,129 @@ const RedditScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar translucent backgroundColor="transparent" />
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Star Rail Reddit</Text>
-        </View>
+    <>
+      {renderWebviewModal()}
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar translucent backgroundColor="transparent" />
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Star Rail Reddit</Text>
+          </View>
 
-        {/* Search bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#878A8C" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search characters..."
-            placeholderTextColor="#878A8C"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery !== '' && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color="#878A8C" />
+          {/* Search bar */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#878A8C" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search characters..."
+              placeholderTextColor="#878A8C"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery !== '' && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color="#878A8C" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* subreddit selection */}
+          <View style={styles.subredditSelection}>
+            <FlatList
+              data={filteredSubreddits}
+              renderItem={renderSubredditButton}
+              keyExtractor={(item) => item.subreddit}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.subredditList}
+            />
+          </View>
+
+          {/* sort options */}
+          <View style={styles.sortOptions}>
+            <TouchableOpacity
+              style={[styles.sortButton, sortBy === 'hot' && styles.activeSortButton]}
+              onPress={() => changeSortOrder('hot')}
+            >
+              <Ionicons
+                name="flame"
+                size={16}
+                color={sortBy === 'hot' ? '#FF4500' : '#878A8C'}
+              />
+              <Text style={[styles.sortButtonText, sortBy === 'hot' && styles.activeSortText]}>
+                Hot
+              </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.sortButton, sortBy === 'new' && styles.activeSortButton]}
+              onPress={() => changeSortOrder('new')}
+            >
+              <Ionicons
+                name="time"
+                size={16}
+                color={sortBy === 'new' ? '#FF4500' : '#878A8C'}
+              />
+              <Text style={[styles.sortButtonText, sortBy === 'new' && styles.activeSortText]}>
+                New
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.sortButton, sortBy === 'top' && styles.activeSortButton]}
+              onPress={() => changeSortOrder('top')}
+            >
+              <Ionicons
+                name="trophy"
+                size={16}
+                color={sortBy === 'top' ? '#FF4500' : '#878A8C'}
+              />
+              <Text style={[styles.sortButtonText, sortBy === 'top' && styles.activeSortText]}>
+                Top
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* error message */}
+          {error && (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle" size={24} color="#FF4500" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          {/* posts list */}
+          {loading && posts.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#01DBC6" />
+              <Text style={styles.loadingText}>Loading posts...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={posts}
+              renderItem={renderPostItem}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.postsList}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={['#01DBC6']}
+                />
+              }
+              ListEmptyComponent={
+                !loading && (
+                  <View style={styles.emptyContainer}>
+                    <Ionicons name="document-text-outline" size={48} color="#878A8C" />
+                    <Text style={styles.emptyText}>No posts found</Text>
+                  </View>
+                )
+              }
+            />
           )}
         </View>
-
-        {/* subreddit selection */}
-        <View style={styles.subredditSelection}>
-          <FlatList
-            data={filteredSubreddits}
-            renderItem={renderSubredditButton}
-            keyExtractor={(item) => item.subreddit}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.subredditList}
-          />
-        </View>
-
-        {/* sort options */}
-        <View style={styles.sortOptions}>
-          <TouchableOpacity
-            style={[styles.sortButton, sortBy === 'hot' && styles.activeSortButton]}
-            onPress={() => changeSortOrder('hot')}
-          >
-            <Ionicons
-              name="flame"
-              size={16}
-              color={sortBy === 'hot' ? '#FF4500' : '#878A8C'}
-            />
-            <Text style={[styles.sortButtonText, sortBy === 'hot' && styles.activeSortText]}>
-              Hot
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.sortButton, sortBy === 'new' && styles.activeSortButton]}
-            onPress={() => changeSortOrder('new')}
-          >
-            <Ionicons
-              name="time"
-              size={16}
-              color={sortBy === 'new' ? '#FF4500' : '#878A8C'}
-            />
-            <Text style={[styles.sortButtonText, sortBy === 'new' && styles.activeSortText]}>
-              New
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.sortButton, sortBy === 'top' && styles.activeSortButton]}
-            onPress={() => changeSortOrder('top')}
-          >
-            <Ionicons
-              name="trophy"
-              size={16}
-              color={sortBy === 'top' ? '#FF4500' : '#878A8C'}
-            />
-            <Text style={[styles.sortButtonText, sortBy === 'top' && styles.activeSortText]}>
-              Top
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* error message */}
-        {error && (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle" size={24} color="#FF4500" />
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        {/* posts list */}
-        {loading && posts.length === 0 ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#01DBC6" />
-            <Text style={styles.loadingText}>Loading posts...</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={posts}
-            renderItem={renderPostItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.postsList}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={['#01DBC6']}
-              />
-            }
-            ListEmptyComponent={
-              !loading && (
-                <View style={styles.emptyContainer}>
-                  <Ionicons name="document-text-outline" size={48} color="#878A8C" />
-                  <Text style={styles.emptyText}>No posts found</Text>
-                </View>
-              )
-            }
-          />
-        )}
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </>
   );
 };
 
