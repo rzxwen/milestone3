@@ -54,16 +54,16 @@ const RedditScreen = () => {
   const fetchPosts = async (subreddit, sort = sortBy) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await fetch(`https://www.reddit.com/r/${subreddit}/${sort}.json?limit=25`);
-      
+
       if (!response.ok) {
         throw new Error(`Reddit API error: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       // process the data to extract only what we need
       const processedPosts = data.data.children.map(post => ({
         id: post.data.id,
@@ -78,7 +78,7 @@ const RedditScreen = () => {
         isVideo: post.data.is_video,
         selftext: post.data.selftext
       }));
-      
+
       setPosts(processedPosts);
     } catch (err) {
       console.error('Error fetching Reddit posts:', err);
@@ -91,7 +91,7 @@ const RedditScreen = () => {
   };
 
   // filter subreddits based on search query
-  const filteredSubreddits = CHARACTER_SUBREDDITS.filter(item => 
+  const filteredSubreddits = CHARACTER_SUBREDDITS.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.subreddit.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -116,7 +116,7 @@ const RedditScreen = () => {
   const formatRelativeTime = (timestamp) => {
     const now = Math.floor(Date.now() / 1000);
     const diff = now - timestamp;
-    
+
     if (diff < 60) return 'just now';
     if (diff < 3600) return `${Math.floor(diff / 60)} minute${Math.floor(diff / 60) !== 1 ? 's' : ''} ago`; // in minutes
     if (diff < 86400) return `${Math.floor(diff / 3600)} hour${Math.floor(diff / 3600) !== 1 ? 's' : ''} ago`; // 24 hours
@@ -133,13 +133,13 @@ const RedditScreen = () => {
   // reddit post rendering
   const renderPostItem = ({ item }) => {
     // determine if thumbnail should be shown
-    const showThumbnail = item.thumbnail && 
-                          item.thumbnail !== 'self' && 
-                          item.thumbnail !== 'default' &&
-                          item.thumbnail !== 'nsfw';
-    
+    const showThumbnail = item.thumbnail &&
+      item.thumbnail !== 'self' &&
+      item.thumbnail !== 'default' &&
+      item.thumbnail !== 'nsfw';
+
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.postItem}
         onPress={() => openPostInBrowser(item.permalink)}
         activeOpacity={0.7}
@@ -149,7 +149,7 @@ const RedditScreen = () => {
             <Text style={styles.postTitle} numberOfLines={2}>{item.title}</Text>
             <Text style={styles.postTime}>{formatRelativeTime(item.created)}</Text>
           </View>
-          
+
           <View style={styles.postDetails}>
             <Text style={styles.postAuthor}>Posted by u/{item.author}</Text>
             <View style={styles.postStats}>
@@ -163,17 +163,17 @@ const RedditScreen = () => {
               </View>
             </View>
           </View>
-          
+
           {item.selftext && (
             <Text style={styles.postSummary} numberOfLines={2}>
               {item.selftext}
             </Text>
           )}
         </View>
-        
+
         {showThumbnail && (
-          <Image 
-            source={{ uri: item.thumbnail }} 
+          <Image
+            source={{ uri: item.thumbnail }}
             style={styles.thumbnail}
             resizeMode="cover"
           />
@@ -191,7 +191,7 @@ const RedditScreen = () => {
       ]}
       onPress={() => setSelectedSubreddit(item.subreddit)}
     >
-      <Text 
+      <Text
         style={[
           styles.subredditButtonText,
           selectedSubreddit === item.subreddit && styles.selectedSubredditText
@@ -209,7 +209,7 @@ const RedditScreen = () => {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Star Rail Reddit</Text>
         </View>
-        
+
         {/* Search bar */}
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#878A8C" style={styles.searchIcon} />
@@ -245,38 +245,38 @@ const RedditScreen = () => {
             style={[styles.sortButton, sortBy === 'hot' && styles.activeSortButton]}
             onPress={() => changeSortOrder('hot')}
           >
-            <Ionicons 
-              name="flame" 
-              size={16} 
-              color={sortBy === 'hot' ? '#FF4500' : '#878A8C'} 
+            <Ionicons
+              name="flame"
+              size={16}
+              color={sortBy === 'hot' ? '#FF4500' : '#878A8C'}
             />
             <Text style={[styles.sortButtonText, sortBy === 'hot' && styles.activeSortText]}>
               Hot
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[styles.sortButton, sortBy === 'new' && styles.activeSortButton]}
             onPress={() => changeSortOrder('new')}
           >
-            <Ionicons 
-              name="time" 
-              size={16} 
-              color={sortBy === 'new' ? '#FF4500' : '#878A8C'} 
+            <Ionicons
+              name="time"
+              size={16}
+              color={sortBy === 'new' ? '#FF4500' : '#878A8C'}
             />
             <Text style={[styles.sortButtonText, sortBy === 'new' && styles.activeSortText]}>
               New
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[styles.sortButton, sortBy === 'top' && styles.activeSortButton]}
             onPress={() => changeSortOrder('top')}
           >
-            <Ionicons 
-              name="trophy" 
-              size={16} 
-              color={sortBy === 'top' ? '#FF4500' : '#878A8C'} 
+            <Ionicons
+              name="trophy"
+              size={16}
+              color={sortBy === 'top' ? '#FF4500' : '#878A8C'}
             />
             <Text style={[styles.sortButtonText, sortBy === 'top' && styles.activeSortText]}>
               Top

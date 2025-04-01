@@ -4,6 +4,9 @@ import { initializeApp } from "firebase/app";
 //import firebase authenticiation functionality into your project
 import { getAuth } from "firebase/auth";
 
+
+import { getFirestore } from "firebase/firestore";
+
 //your web app's firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBuSnpUij8H5Z3vukCWvuOe4dRnap87fl8",
@@ -20,3 +23,4 @@ export const firebase_app = initializeApp(firebaseConfig);
 
 //exports the firebase authentication instance to be used in other parts of your project
 export const firebase_auth = getAuth(firebase_app);
+export const firestore_db = getFirestore(firebase_app);
