@@ -46,7 +46,6 @@ const CameraScreen = () => {
   const [placedStickers, setPlacedStickers] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [finalImageUri, setFinalImageUri] = useState(null);
-  const [selectedStickerSize, setSelectedStickerSize] = useState(1); // scale factor for stickers
   const [viewShotLayout, setViewShotLayout] = useState({ width: 0, height: 0 });
   const [showDeleteButtons, setShowDeleteButtons] = useState(true); // delete button visibility
   
@@ -56,7 +55,7 @@ const CameraScreen = () => {
   // permission handling
   if (!permission) {
     return (
-      <View style={styles.container}>
+      <View style={styles.permissionContainer}>
         <Text style={styles.loadingText}>Requesting camera permission...</Text>
       </View>
     );
@@ -64,11 +63,13 @@ const CameraScreen = () => {
 
   if (!permission.granted) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.message}>Camera access is required for this feature</Text>
-        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-          <Text style={styles.permissionButtonText}>Grant Permission</Text>
-        </TouchableOpacity>
+      <View style={styles.permissionContainer}>
+        <View style={styles.permissionContent}>
+          <Text style={styles.message}>Camera access is required for this feature</Text>
+          <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
+            <Text style={styles.permissionButtonText}>Grant Permission</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -145,7 +146,7 @@ const CameraScreen = () => {
       id: Date.now(),
       sticker,
       position: { x: centerX, y: centerY },
-      scale: selectedStickerSize,
+      scale: 1, // Default scale for new stickers
     };
     
     setPlacedStickers([...placedStickers, newSticker]);
@@ -158,6 +159,18 @@ const CameraScreen = () => {
         if (item.id === id) {
           // code to update from previous state https://react.dev/reference/react/useState#updating-state-based-on-the-previous-state
           return { ...item, position: newPosition };
+        }
+        return item;
+      })
+    );
+  };
+
+  // Add a new function to update sticker scale
+  const updateStickerScale = (id, newScale) => {
+    setPlacedStickers(currentStickers => 
+      currentStickers.map(item => {
+        if (item.id === id) {
+          return { ...item, scale: newScale };
         }
         return item;
       })
@@ -201,32 +214,70 @@ const CameraScreen = () => {
   const PlacedSticker = ({ sticker, position: initialPosition, id, scale = 1 }) => {
     // initialPosition directly in our local state
     const [position, setPosition] = useState(initialPosition);
+    const [stickerScale, setStickerScale] = useState(scale);
     
     // use refs to track position during drag operations
     const positionRef = useRef(initialPosition);
     const lastGestureState = useRef({ dx: 0, dy: 0 });
+    const initialDistanceRef = useRef(null);
+    const currentScaleRef = useRef(scale);
     
     // this useEffect ensures our local state stays in sync with parent, also ensure proper functionality with drag gestures
     useEffect(() => {
       positionRef.current = initialPosition;
       setPosition(initialPosition);
-    }, [initialPosition]);
+      currentScaleRef.current = scale;
+      setStickerScale(scale);
+    }, [initialPosition, scale]);
     
-    // create pan responder for dragging functionality with boundary checks, code from https://reactnative.dev/docs/panresponder
+    // create pan responder for dragging and pinch functionality, code from https://reactnative.dev/docs/panresponder
     const panResponder = useRef(
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
-        onPanResponderGrant: () => {
+        onPanResponderGrant: (evt) => {
           // reset gesture tracking at the start of a new drag
           lastGestureState.current = { dx: 0, dy: 0 };
+          initialDistanceRef.current = null;
         },
         onPanResponderMove: (evt, gestureState) => {
-          // calculate the new position
+          const touches = evt.nativeEvent.touches;
+          
+          // Check if this is a pinch gesture (2 touches)
+          if (touches.length === 2) {
+            // Calculate the distance between the two touches
+            const dx = touches[0].pageX - touches[1].pageX;
+            const dy = touches[0].pageY - touches[1].pageY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // If this is the start of a pinch, save the initial distance
+            if (!initialDistanceRef.current) {
+              initialDistanceRef.current = distance;
+              return;
+            }
+            
+            // Calculate the scale factor based on the change in distance
+            let newScale = currentScaleRef.current * (distance / initialDistanceRef.current);
+            
+            // Limit the scale to reasonable values (0.5 to 3)
+            newScale = Math.max(0.5, Math.min(3, newScale));
+            
+            // Update the scale
+            currentScaleRef.current = newScale;
+            setStickerScale(newScale);
+            
+            // Don't process drag movement during pinch
+            return;
+          } else if (initialDistanceRef.current) {
+            // If we were pinching and now we're not, reset initial distance
+            initialDistanceRef.current = null;
+          }
+          
+          // Handle normal drag movement
           const newX = positionRef.current.x + (gestureState.dx - lastGestureState.current.dx);
           const newY = positionRef.current.y + (gestureState.dy - lastGestureState.current.dy);
           
-          // boundary constaints for the sticker
-          const stickerSize = 80 * scale;
+          // boundary constraints for the sticker
+          const stickerSize = 80 * stickerScale;
           const constrainedX = Math.max(0, Math.min(viewShotLayout.width - stickerSize, newX));
           const constrainedY = Math.max(0, Math.min(viewShotLayout.height - stickerSize, newY));
           
@@ -239,9 +290,11 @@ const CameraScreen = () => {
           lastGestureState.current = { dx: gestureState.dx, dy: gestureState.dy };
         },
         onPanResponderRelease: () => {
-          // when the drag is finished, update the parent component state
-          // sync the sticker's final position with the parent
+          // when the gesture is finished, update the parent component state
           updateStickerPosition(id, positionRef.current);
+          
+          // Always update the scale when the gesture ends
+          updateStickerScale(id, currentScaleRef.current);
         },
       })
     ).current;
@@ -254,7 +307,7 @@ const CameraScreen = () => {
           {
             left: position.x,
             top: position.y,
-            transform: [{ scale: scale }]
+            transform: [{ scale: stickerScale }]
           }
         ]}
       >
@@ -284,27 +337,7 @@ const CameraScreen = () => {
   const StickerSelector = () => {
     return (
       <View style={styles.stickerSelectorContainer}>
-        {/* size selector for small, medium and large sticker sizes */}
-        <View style={styles.sizeSelector}>
-          <TouchableOpacity 
-            style={[styles.sizeButton, selectedStickerSize === 0.75 && styles.selectedSize]} 
-            onPress={() => setSelectedStickerSize(0.75)}
-          >
-            <Text style={styles.sizeButtonText}>S</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.sizeButton, selectedStickerSize === 1 && styles.selectedSize]} 
-            onPress={() => setSelectedStickerSize(1)}
-          >
-            <Text style={styles.sizeButtonText}>M</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.sizeButton, selectedStickerSize === 1.5 && styles.selectedSize]} 
-            onPress={() => setSelectedStickerSize(1.5)}
-          >
-            <Text style={styles.sizeButtonText}>L</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Removed size selector buttons */}
         
         {/* sticker selection from horizontal menu */}
         <ScrollView 
@@ -326,6 +359,9 @@ const CameraScreen = () => {
             </TouchableOpacity>
           ))}
         </ScrollView>
+        
+        {/* Instruction text for pinch gesture */}
+        <Text style={styles.gestureHint}>Pinch to resize stickers</Text>
       </View>
     );
   };
@@ -420,29 +456,35 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
+  permissionContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  permissionContent: {
+    alignItems: 'center',
+    padding: 20,
+    width: '80%',
+  },
   loadingText: {
     color: '#fff',
     textAlign: 'center',
-    marginTop: 20,
+    fontSize: 16,
   },
   message: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     textAlign: 'center',
-    marginHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 30,
   },
   permissionButton: {
     backgroundColor: '#01DBC6',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
-    alignSelf: 'center',
-  },
-  permissionButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    width: '100%',
+    alignItems: 'center',
   },
   camera: {
     flex: 1,
@@ -542,31 +584,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  sizeSelector: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  sizeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    marginHorizontal: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#888',
-  },
-  selectedSize: {
-    borderColor: '#01DBC6',
-    borderWidth: 2,
-    backgroundColor: 'rgba(1, 219, 198, 0.3)',
-  },
-  sizeButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
   stickerSelector: {
     backgroundColor: 'rgba(0,0,0,0.5)',
     paddingVertical: 10,
@@ -609,6 +626,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+  },
+  gestureHint: {
+    color: '#FFFFFF',
+    textAlign: 'center',
+    fontSize: 12,
+    marginTop: 10,
+    marginBottom: 5,
+    fontStyle: 'italic',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 3,
   },
 });
 

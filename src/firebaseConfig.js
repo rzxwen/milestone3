@@ -1,7 +1,6 @@
 //initialize a firebase app in the react native project
 import { initializeApp } from "firebase/app";
-import { initializeAuth, getReactNativePersistence } from "firebase/auth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getAuth } from "firebase/auth"; 
 
 import { getFirestore } from "firebase/firestore";
 
@@ -18,10 +17,7 @@ const firebaseConfig = {
 //exports the app so that it can be used in other parts of the project
 export const app = initializeApp(firebaseConfig);
 
-// Initialize Auth with persistence
-export const firebase_auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+export const firebase_auth = getAuth(app); // Fixed incorrect variable name
 
 //exports the firestore database instance to be used in other parts of your project
 export const firestore_db = getFirestore(app);
